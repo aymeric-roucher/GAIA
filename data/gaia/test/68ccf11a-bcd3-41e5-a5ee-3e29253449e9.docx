@@ -1,0 +1,10 @@
+1. Place the first letter of the third word on a line to begin a new word.
+2. Add the first and last letters of the last word before and after the new word, respectively.
+3. Place the last letter of the fourth word at the beginning of the new word.
+4. Add the new word’s reverse to its end to make a palindrome.
+5. Remove letters 3, 4, 7, and 8 from the new word.
+6. Add the fourth letter from the end of the line, with the letter turned upside-down, to the beginning of the new word.
+7. Reverse the new word.
+8. Add the last two letters of the third word after the comma to the new word’s end.
+9. Remove the repeated consonant that’s not on the end of the new word.
+10. Put the new word in upper case.
