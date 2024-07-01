@@ -8,7 +8,7 @@ openai_role_conversions = {
     MessageRole.TOOL_RESPONSE: MessageRole.USER,
 }
 
-class OpenAIModel:
+class OpenAIEngine:
     def __init__(self, model_name="gpt-4o"):
         self.model_name = model_name
         self.client = OpenAI(
@@ -27,7 +27,7 @@ class OpenAIModel:
         return response.choices[0].message.content
 
 
-class AnthropicModel:
+class AnthropicEngine:
     def __init__(self, model_name="claude-3-5-sonnet-20240620", use_bedrock=False):
         self.model_name = model_name
         if use_bedrock: # Cf this page: https://docs.anthropic.com/en/api/claude-on-amazon-bedrock
@@ -76,7 +76,7 @@ class AnthropicModel:
 # import json
 # import os
 
-# class AnthropicBedrockModel:
+# class AnthropicBedrockEngine:
 #     def __init__(self, model_name="anthropic.claude-3-5-sonnet-20240620-v1:0"):
 #         self.model_name = model_name
 #         self.bedrock_runtime = boto3.client(

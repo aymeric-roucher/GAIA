@@ -25,7 +25,7 @@ from scripts.tools.mdconvert import MarkdownConverter
 from scripts.reformulator import prepare_response
 from scripts.run_agents import answer_questions
 from scripts.tools.visual_qa import VisualQATool, VisualQAGPT4Tool
-from scripts.llm_engines import OpenAIModel, AnthropicModel
+from scripts.llm_engines import OpenAIEngine, AnthropicEngine
 load_dotenv(override=True)
 login(os.getenv("HUGGINGFACEHUB_API_TOKEN"))
 
@@ -39,7 +39,7 @@ USE_JSON = False
 
 SET = "validation"
 
-proprietary_llm_engine = AnthropicModel(use_bedrock=True)
+proprietary_llm_engine = OpenAIEngine()
 
 url_llama3 = "meta-llama/Meta-Llama-3-70B-Instruct"
 url_qwen2 = "https://azbwihkodyacoe54.us-east-1.aws.endpoints.huggingface.cloud"
@@ -305,7 +305,7 @@ async def call_transformers(agent, question: str, **kwargs) -> str:
 results = asyncio.run(answer_questions(
     eval_ds,
     react_agent,
-    "react_code_claude_28-june_planning2_newprompt5",
+    "react_code_gpt4o_28-june",
     output_folder=f"{OUTPUT_DIR}/{SET}",
     agent_call_function=call_transformers,
     visual_inspection_tool = VisualQAGPT4Tool(),

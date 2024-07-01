@@ -9,7 +9,7 @@ langchain_core==0.2.10
 mammoth==1.7.1
 markdownify==0.12.1
 numexpr==2.10.0
-numpy==2.0.0
+numpy
 openai==1.35.7
 pandas==2.2.2
 pathvalidate==3.2.0
@@ -22,6 +22,6 @@ python-dotenv==1.0.1
 python_pptx==0.6.23
 Requests==2.32.3
 tqdm==4.66.4
-transformers==4.41.0.dev0
-transformers.egg==info
+torch
+git+https://github.com/huggingface/transformers.git[agents]@agents-planning
 youtube_transcript_api==0.6.2
