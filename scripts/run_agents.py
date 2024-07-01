@@ -13,7 +13,7 @@ from langchain.agents import AgentExecutor
 from langchain.tools.base import ToolException
 from transformers.agents.default_tools import Tool
 from transformers.agents.agents import AgentError
-from .evaluation.unsolved_questions import UNSOLVED_QUESTIONS
+from .evaluation.hard_questions import HARD_QUESTIONS
 
 def acall_langchain_agent(agent: AgentExecutor, question: str) -> str:
     return agent.ainvoke({"input": question})
@@ -177,6 +177,7 @@ async def answer_questions(
     agent_call_function: Callable = call_langchain_agent,
     visual_inspection_tool: Tool = None,
     text_inspector_tool: Tool = None,
+    skip_hard_questions: bool = False
 ) -> List[Dict[str, Any]]:
     """
     Evaluates the agent on a given dataset.
@@ -208,6 +209,9 @@ async def answer_questions(
         if len(results_df) > 0:
             if example["question"] in results_df["question"].unique():
                 continue
+            if skip_hard_questions:
+                if example["question"] in HARD_QUESTIONS:
+                    continue
         prompt_use_files = ""
         if example['file_name']:
             if '.MOV' in example['file_name']:

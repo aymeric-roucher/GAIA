@@ -1,15 +1,16 @@
 import copy
+from transformers.agents.llm_engine import MessageRole
 
 def prepare_response(original_task, inner_messages, llm_engine):
 
     messages = [
         {
-            "role": "user",
+            "role": MessageRole.SYSTEM,
             "content": f"""Earlier you were asked the following:
 
 {original_task}
 
-Your team then worked diligently to address that request. Here is a transcript of that conversation:""",
+Your team then worked diligently to address that request. Read below a transcript of that conversation:""",
         }
     ]
 
@@ -22,13 +23,13 @@ Your team then worked diligently to address that request. Here is a transcript o
         if not message.get("content"):
             continue
         message = copy.deepcopy(message)
-        message["role"] = "user"
+        message["role"] = MessageRole.USER
         messages.append(message)
 
     # ask for the final answer
     messages.append(
         {
-            "role": "user",
+            "role": MessageRole.USER,
             "content": f"""
 Read the above conversation and output a FINAL ANSWER to the question. The question is repeated here for convenience:
 
@@ -51,8 +52,8 @@ If you are unable to determine the final answer, output 'FINAL ANSWER: Unable to
     print("Reformulated answer is: ", final_answer)
 
     if "unable to determine" in final_answer.lower():
-        messages.append({"role": "assistant", "content": response })
-        messages.append({"role": "user", "content": """
+        messages.append({"role": MessageRole.ASSISTANT, "content": response })
+        messages.append({"role": MessageRole.USER, "content": """
 I understand that a definitive answer could not be determined. Please make a well-informed EDUCATED GUESS based on the conversation.
 
 To output the educated guess, use the following template: EDUCATED GUESS: [YOUR EDUCATED GUESS]

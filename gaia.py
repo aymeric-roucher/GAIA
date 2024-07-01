@@ -1,6 +1,5 @@
 import asyncio
 import os
-from openai import OpenAI
 from typing import Optional
 import json
 import pandas as pd
@@ -9,10 +8,9 @@ import datasets
 from huggingface_hub import login
 
 from transformers.agents import ReactCodeAgent, ReactJsonAgent, HfEngine
-from transformers.agents.llm_engine import MessageRole, get_clean_message_list
 from transformers.agents.prompts import DEFAULT_REACT_CODE_SYSTEM_PROMPT, DEFAULT_REACT_JSON_SYSTEM_PROMPT
 from transformers.agents.default_tools import Tool, PythonInterpreterTool
-
+from transformers.agents.llm_engine import MessageRole
 from scripts.tools.web_surfer import (
     SearchInformationTool,
     NavigationalSearchTool,
@@ -27,7 +25,7 @@ from scripts.tools.mdconvert import MarkdownConverter
 from scripts.reformulator import prepare_response
 from scripts.run_agents import answer_questions
 from scripts.tools.visual_qa import VisualQATool, VisualQAGPT4Tool
-
+from scripts.llm_engines import OpenAIModel, AnthropicModel
 load_dotenv(override=True)
 login(os.getenv("HUGGINGFACEHUB_API_TOKEN"))
 
@@ -35,39 +33,13 @@ login(os.getenv("HUGGINGFACEHUB_API_TOKEN"))
 
 print("Make sure you deactivated Tailsacale VPN, else some URLs will be blocked!")
 
-OUTPUT_DIR = "output_gaia"
+OUTPUT_DIR = "output"
 USE_OS_MODELS = False
 USE_JSON = False
 
-SET = "test"
+SET = "validation"
 
-### BUILD LLM ENGINES
-
-openai_role_conversions = {
-    MessageRole.TOOL_RESPONSE: MessageRole.USER,
-}
-
-
-class OpenAIModel:
-    def __init__(self, model_name="gpt-4o"):
-        self.model_name = model_name
-        self.client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
-
-    def __call__(self, messages, stop_sequences=[]):
-        messages = get_clean_message_list(messages, role_conversions=openai_role_conversions)
-
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            stop=stop_sequences,
-            temperature=0.5
-        )
-        return response.choices[0].message.content
-
-
-oai_llm_engine = OpenAIModel()
+proprietary_llm_engine = AnthropicModel(use_bedrock=True)
 
 url_llama3 = "meta-llama/Meta-Llama-3-70B-Instruct"
 url_qwen2 = "https://azbwihkodyacoe54.us-east-1.aws.endpoints.huggingface.cloud"
@@ -100,7 +72,7 @@ websurfer_llm_engine = HfEngine(
 
 # Replace with OAI if needed
 if not USE_OS_MODELS:
-    websurfer_llm_engine = oai_llm_engine
+    websurfer_llm_engine = proprietary_llm_engine
 
 ### BUILD AGENTS & TOOLS
 
@@ -150,14 +122,14 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         if initial_exam_mode:
             messages = [
                 {
-                    "role": "user",
+                    "role": MessageRole.SYSTEM,
                     "content": "Here is a file:\n### "
                     + str(result.title)
                     + "\n\n"
                     + result.text_content[:70000],
                 },
                 {
-                    "role": "user",
+                    "role": MessageRole.USER,
                     "content": question,
                 },
             ]
@@ -165,19 +137,19 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         else:
             messages = [
                 {
-                    "role": "user",
+                    "role": MessageRole.SYSTEM,
                     "content": "You will have to write a short caption for this file, then answer this question:"
                     + question,
                 },
                 {
-                    "role": "user",
+                    "role": MessageRole.USER,
                     "content": "Here is the complete file:\n### "
                     + str(result.title)
                     + "\n\n"
                     + result.text_content[:70000],
                 },
                 {
-                    "role": "user",
+                    "role": MessageRole.USER,
                     "content": "Now answer the question below. Use these three headings: '1. Short answer', '2. Extremely detailed answer', '3. Additional Context on the document and question asked'."
                     + question,
                 },
@@ -188,7 +160,7 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
 surfer_agent = ReactJsonAgent(
     llm_engine=websurfer_llm_engine,
     tools=WEB_TOOLS,
-    max_iterations=12,
+    max_iterations=10,
     verbose=2,
     system_prompt=DEFAULT_REACT_JSON_SYSTEM_PROMPT + "\nAdditionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information.",
     planning_interval=4,
@@ -263,12 +235,12 @@ if USE_JSON:
 
 hf_llm_engine = HfEngine(model=url_qwen2)
 
-llm_engine = hf_llm_engine if USE_OS_MODELS else oai_llm_engine
+llm_engine = hf_llm_engine if USE_OS_MODELS else proprietary_llm_engine
 
 react_agent = ReactCodeAgent(
     llm_engine=llm_engine,
     tools=TASK_SOLVING_TOOLBOX,
-    max_iterations=15,
+    max_iterations=12,
     verbose=0,
     memory_verbose=True,
     system_prompt=DEFAULT_REACT_CODE_SYSTEM_PROMPT,
@@ -305,11 +277,11 @@ if USE_JSON:
     react_agent = ReactJsonAgent(
         llm_engine=llm_engine,
         tools=TASK_SOLVING_TOOLBOX,
-        max_iterations=15,
+        max_iterations=12,
         verbose=0,
         memory_verbose=True,
         system_prompt=DEFAULT_REACT_JSON_SYSTEM_PROMPT,
-        planning_interval=2
+        planning_interval=3
     )
 
 ### EVALUATE
@@ -333,7 +305,7 @@ async def call_transformers(agent, question: str, **kwargs) -> str:
 results = asyncio.run(answer_questions(
     eval_ds,
     react_agent,
-    "react_code_gpt4o_23-june_planning2_newprompt5_test",
+    "react_code_claude_28-june_planning2_newprompt5",
     output_folder=f"{OUTPUT_DIR}/{SET}",
     agent_call_function=call_transformers,
     visual_inspection_tool = VisualQAGPT4Tool(),

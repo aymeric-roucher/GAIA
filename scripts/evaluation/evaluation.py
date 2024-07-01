@@ -244,30 +244,6 @@ def score_last_match_series(predictions: pd.Series, true_answers: pd.Series) -> 
     return [score_last_match(predictions.values[i], true_answers.values[i]) for i in range(len(predictions.values))]
 
 
-# def score_levenshtein(prediction: str, true_answer: str):
-#     if len(prediction) <= len(true_answer):
-#         return 1 - (
-#             levenshtein_distance(prediction.lower(), true_answer.lower())
-#             / len(true_answer)
-#         )
-#     else:  # find substring with highest score
-#         base_score = max(
-#             [
-#                 1
-#                 - (
-#                     levenshtein_distance(
-#                         prediction[offset : offset + len(true_answer)].lower(),
-#                         true_answer.lower(),
-#                     )
-#                     / len(true_answer)
-#                 )
-#                 for offset in range(len(prediction) - len(true_answer))
-#             ]
-#         )
-#         # downgrade score if length is too long
-#         return base_score
-
-
 def score_naive_match(prediction: str, true_answer: str):
     if len(prediction) <= len(true_answer):
         return prediction.lower() == true_answer.lower()
@@ -282,10 +258,3 @@ def score_naive_match(prediction: str, true_answer: str):
     
 def is_number(am_i_a_number):
     return am_i_a_number.strip().lstrip('-').replace('.', '', 1).replace(',', '').isdigit()
-
-
-# def score_outputs(prediction: str, true_answer: str):
-#     if is_number(true_answer):
-#         return score_any_match(prediction, true_answer)
-#     else:
-#         return score_levenshtein(prediction, true_answer)
