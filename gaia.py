@@ -202,7 +202,7 @@ If it's another format, you can return the url of the file, and your manager wil
 And even if your search is unsuccessful, please return as much context as possible, so they can act upon this feedback.
 """)
         answer = "Here is the report from your team member's search:\n"
-        for message in surfer_agent.write_inner_memory_from_logs(only_tool_calls=True):
+        for message in surfer_agent.write_inner_memory_from_logs(summary_mode=True):
             content = message['content']
             if 'tool_arguments' in str(content):
                 if len(str(content)) < 1000 or "[FACTS]" in str(content):
