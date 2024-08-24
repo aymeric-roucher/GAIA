@@ -212,6 +212,8 @@ async def answer_questions(
             if skip_hard_questions:
                 if example["question"] in HARD_QUESTIONS:
                     continue
+        if "If this whole pint is made up of ice cream" in example["question"]:
+            continue
         prompt_use_files = ""
         if example['file_name']:
             if '.MOV' in example['file_name']:

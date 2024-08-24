@@ -213,7 +213,6 @@ class YouTubeConverter(DocumentConverter):
 
         video_id = params["v"][0]
         # Must be a single transcript.
-        print("VIDDDD ID:", video_id)
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         transcript_text = " ".join([part["text"] for part in transcript])
         # Alternative formatting:

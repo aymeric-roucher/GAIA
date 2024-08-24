@@ -2,7 +2,6 @@ from transformers.agents.llm_engine import MessageRole, get_clean_message_list
 import os
 from openai import OpenAI
 from anthropic import Anthropic, AnthropicBedrock
-import boto3
 
 openai_role_conversions = {
     MessageRole.TOOL_RESPONSE: MessageRole.USER,
@@ -15,14 +14,15 @@ class OpenAIEngine:
             api_key=os.getenv("OPENAI_API_KEY"),
         )
 
-    def __call__(self, messages, stop_sequences=[]):
+    def __call__(self, messages, stop_sequences=[], grammar=None):
         messages = get_clean_message_list(messages, role_conversions=openai_role_conversions)
 
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
             stop=stop_sequences,
-            temperature=0.5
+            temperature=0.5,
+            response_format=grammar
         )
         return response.choices[0].message.content
 

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-idefics_processor = AutoProcessor.from_pretrained("HuggingFaceM4/idefics2-8b")
+idefics_processor = AutoProcessor.from_pretrained("HuggingFaceM4/idefics2-8b-chatty")
 
 def process_images_and_text(image_path, query, client):
     messages = [
