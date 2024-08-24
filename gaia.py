@@ -8,7 +8,8 @@ import datasets
 from huggingface_hub import login
 
 from transformers.agents import ReactCodeAgent, ReactJsonAgent, HfEngine
-from transformers.agents.prompts import DEFAULT_REACT_CODE_SYSTEM_PROMPT, DEFAULT_REACT_JSON_SYSTEM_PROMPT
+from transformers.agents.llm_engine import DEFAULT_CODEAGENT_REGEX_GRAMMAR, DEFAULT_JSONAGENT_REGEX_GRAMMAR
+from transformers.agents.agents import DEFAULT_REACT_JSON_SYSTEM_PROMPT
 from transformers.agents.default_tools import Tool, PythonInterpreterTool
 from transformers.agents.llm_engine import MessageRole
 from scripts.tools.web_surfer import (
@@ -31,7 +32,7 @@ login(os.getenv("HUGGINGFACEHUB_API_TOKEN"))
 
 ### IMPORTANT: EVALUATION SWITCHES
 
-print("Make sure you deactivated Tailsacale VPN, else some URLs will be blocked!")
+print("Make sure you deactivated Tailscale VPN, else some URLs will be blocked!")
 
 OUTPUT_DIR = "output"
 USE_OS_MODELS = False
@@ -39,12 +40,17 @@ USE_JSON = False
 
 SET = "validation"
 
+# proprietary_llm_engine = AnthropicEngine(use_bedrock=True)
 proprietary_llm_engine = OpenAIEngine()
 
 url_llama3 = "meta-llama/Meta-Llama-3-70B-Instruct"
 url_qwen2 = "https://azbwihkodyacoe54.us-east-1.aws.endpoints.huggingface.cloud"
 url_command_r = "CohereForAI/c4ai-command-r-plus"
+url_gemma2 = "google/gemma-2-27b-it"
+url_custom_llama = "https://lki4zbjpelxely5v.us-east-1.aws.endpoints.huggingface.cloud/"
+url_custom_llama = "meta-llama/Meta-Llama-3.1-70B-Instruct"
 
+URL_OS_MODEL = url_custom_llama
 ### LOAD EVALUATION DATASET
 
 eval_ds = datasets.load_dataset("gaia-benchmark/GAIA", "2023_all")[SET]
@@ -67,7 +73,7 @@ print(pd.Series(eval_ds["task"]).value_counts())
 
 
 websurfer_llm_engine = HfEngine(
-    model=url_qwen2,
+    model=url_custom_llama,
 )  # chosen for its high context length
 
 # Replace with OAI if needed
@@ -162,8 +168,10 @@ surfer_agent = ReactJsonAgent(
     tools=WEB_TOOLS,
     max_iterations=10,
     verbose=2,
+    # grammar = DEFAULT_JSONAGENT_REGEX_GRAMMAR,
     system_prompt=DEFAULT_REACT_JSON_SYSTEM_PROMPT + "\nAdditionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information.",
     planning_interval=4,
+    plan_type="structured",
 )
 
 class SearchTool(Tool):
@@ -233,7 +241,7 @@ TASK_SOLVING_TOOLBOX = [
 if USE_JSON:
     TASK_SOLVING_TOOLBOX.append(PythonInterpreterTool())
 
-hf_llm_engine = HfEngine(model=url_qwen2)
+hf_llm_engine = HfEngine(model=URL_OS_MODEL)
 
 llm_engine = hf_llm_engine if USE_OS_MODELS else proprietary_llm_engine
 
@@ -243,7 +251,7 @@ react_agent = ReactCodeAgent(
     max_iterations=12,
     verbose=0,
     memory_verbose=True,
-    system_prompt=DEFAULT_REACT_CODE_SYSTEM_PROMPT,
+    # grammar=DEFAULT_CODEAGENT_REGEX_GRAMMAR,
     additional_authorized_imports=[
         "requests",
         "zipfile",
@@ -270,7 +278,8 @@ react_agent = ReactCodeAgent(
         "csv",
         "fractions",
     ],
-    planning_interval=2
+    planning_interval=3,
+    plan_type="structured",
 )
 
 if USE_JSON:
@@ -280,8 +289,6 @@ if USE_JSON:
         max_iterations=12,
         verbose=0,
         memory_verbose=True,
-        system_prompt=DEFAULT_REACT_JSON_SYSTEM_PROMPT,
-        planning_interval=3
     )
 
 ### EVALUATE
@@ -302,10 +309,11 @@ async def call_transformers(agent, question: str, **kwargs) -> str:
         ],
     }
 
+
 results = asyncio.run(answer_questions(
     eval_ds,
     react_agent,
-    "react_code_gpt4o_28-june",
+    "react_code_gpt4o_6_aug_structuredplanning_nogrammar",
     output_folder=f"{OUTPUT_DIR}/{SET}",
     agent_call_function=call_transformers,
     visual_inspection_tool = VisualQAGPT4Tool(),

@@ -23,5 +23,5 @@ python_pptx==0.6.23
 Requests==2.32.3
 tqdm==4.66.4
 torch
-git+https://github.com/huggingface/transformers.git[agents]@agents-planning
+git+https://github.com/huggingface/transformers.git[agents]
 youtube_transcript_api==0.6.2
