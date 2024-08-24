@@ -11,6 +11,7 @@ markdownify==0.12.1
 numexpr==2.10.0
 numpy
 openai==1.35.7
+openpyxl==3.1.5
 pandas==2.2.2
 pathvalidate==3.2.0
 pdfminer==20191125
@@ -23,5 +24,6 @@ python_pptx==0.6.23
 Requests==2.32.3
 tqdm==4.66.4
 torch
+xlrd==2.0.1
 git+https://github.com/huggingface/transformers.git[agents]
 youtube_transcript_api==0.6.2
