@@ -7,14 +7,12 @@ from dotenv import load_dotenv
 import datasets
 from huggingface_hub import login
 
-from transformers.agents import ReactCodeAgent, ReactJsonAgent, HfEngine
-from transformers.agents.llm_engine import DEFAULT_CODEAGENT_REGEX_GRAMMAR, DEFAULT_JSONAGENT_REGEX_GRAMMAR
+from transformers.agents import ReactCodeAgent, ReactJsonAgent, HfApiEngine
 from transformers.agents.agents import DEFAULT_REACT_JSON_SYSTEM_PROMPT
 from transformers.agents.default_tools import Tool, PythonInterpreterTool
 from transformers.agents.llm_engine import MessageRole
 from scripts.tools.web_surfer import (
     SearchInformationTool,
-    NavigationalSearchTool,
     VisitTool,
     PageUpTool,
     PageDownTool,
@@ -72,7 +70,7 @@ print("Loaded evaluation dataset:")
 print(pd.Series(eval_ds["task"]).value_counts())
 
 
-websurfer_llm_engine = HfEngine(
+websurfer_llm_engine = HfApiEngine(
     model=url_custom_llama,
 )  # chosen for its high context length
 
@@ -84,7 +82,6 @@ if not USE_OS_MODELS:
 
 WEB_TOOLS = [
     SearchInformationTool(),
-    NavigationalSearchTool(),
     VisitTool(),
     PageUpTool(),
     PageDownTool(),
@@ -171,7 +168,7 @@ surfer_agent = ReactJsonAgent(
     # grammar = DEFAULT_JSONAGENT_REGEX_GRAMMAR,
     system_prompt=DEFAULT_REACT_JSON_SYSTEM_PROMPT + "\nAdditionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information.",
     planning_interval=4,
-    plan_type="structured",
+    plan_type="default",
 )
 
 class SearchTool(Tool):
@@ -213,7 +210,7 @@ And even if your search is unsuccessful, please return as much context as possib
         for message in surfer_agent.write_inner_memory_from_logs(summary_mode=True):
             content = message['content']
             if 'tool_arguments' in str(content):
-                if len(str(content)) < 1000 or "[FACTS]" in str(content):
+                if len(str(content)) < 1000 or "[FACTS LIST]" in str(content):
                     answer += "" + str(content) + "\n"
                 else:
                     try:
@@ -241,7 +238,7 @@ TASK_SOLVING_TOOLBOX = [
 if USE_JSON:
     TASK_SOLVING_TOOLBOX.append(PythonInterpreterTool())
 
-hf_llm_engine = HfEngine(model=URL_OS_MODEL)
+hf_llm_engine = HfApiEngine(model=URL_OS_MODEL)
 
 llm_engine = hf_llm_engine if USE_OS_MODELS else proprietary_llm_engine
 
@@ -250,7 +247,6 @@ react_agent = ReactCodeAgent(
     tools=TASK_SOLVING_TOOLBOX,
     max_iterations=12,
     verbose=0,
-    memory_verbose=True,
     # grammar=DEFAULT_CODEAGENT_REGEX_GRAMMAR,
     additional_authorized_imports=[
         "requests",
@@ -279,7 +275,7 @@ react_agent = ReactCodeAgent(
         "fractions",
     ],
     planning_interval=3,
-    plan_type="structured",
+    plan_type="default",
 )
 
 if USE_JSON:
@@ -288,7 +284,6 @@ if USE_JSON:
         tools=TASK_SOLVING_TOOLBOX,
         max_iterations=12,
         verbose=0,
-        memory_verbose=True,
     )
 
 ### EVALUATE
@@ -313,7 +308,7 @@ async def call_transformers(agent, question: str, **kwargs) -> str:
 results = asyncio.run(answer_questions(
     eval_ds,
     react_agent,
-    "react_code_gpt4o_6_aug_structuredplanning_nogrammar",
+    "react_code_gpt4o_31_aug_defaultplanning_nogrammar_normaltags_nonavigationalsearch",
     output_folder=f"{OUTPUT_DIR}/{SET}",
     agent_call_function=call_transformers,
     visual_inspection_tool = VisualQAGPT4Tool(),

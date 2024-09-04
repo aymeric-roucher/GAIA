@@ -36,7 +36,6 @@ print("Make sure you deactivated Tailscale VPN, else some URLs will be blocked!"
 
 OUTPUT_DIR = "output"
 USE_OS_MODELS = False
-USE_JSON = False
 
 SET = "validation"
 
@@ -183,7 +182,8 @@ Provide him as much context as possible, in particular if you need to search on 
 And don't hesitate to provide him with a complex search task, like finding a difference between two webpages.""",
     additional_prompting="""You can navigate to .txt or .pdf online files using your 'visit_page' tool.
 If it's another format, you can return the url of the file, and your manager will handle the download and inspection from there.
-Additionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information.""",
+Additionally, if after some searching you find out that you need more information to answer the question, you can use `final_answer` with your request for clarification as argument to request for more information.
+""",
     provide_run_summary=True
 )
 
@@ -193,9 +193,6 @@ TASK_SOLVING_TOOLBOX = [
     VisualQAGPT4Tool(),  # VisualQATool(),
     ti_tool,
 ]
-
-if USE_JSON:
-    TASK_SOLVING_TOOLBOX.append(PythonInterpreterTool())
 
 hf_llm_engine = NIMEngine(model=REPO_ID_OS_MODEL)
 
@@ -233,21 +230,37 @@ react_agent = ReactCodeAgent(
         "csv",
         "fractions",
     ],
-    planning_interval=4,
+    # planning_interval=3,
     managed_agents=[search_agent]
 )
 
-if USE_JSON:
-    react_agent = ReactJsonAgent(
-        llm_engine=llm_engine,
-        tools=TASK_SOLVING_TOOLBOX,
-        max_iterations=12,
-        verbose=0,
-    )
+managed_solver_agent_1 = ManagedAgent(
+    react_agent,
+    "solver_agent_1",
+    description="""A team member that will try to solve the task given to you. Make sure to give the main task exactly as it was given to you, word for word, to both this first solver agent first, then also give it to your second agent. Then you will be able to compare answers to decide a final answer.""",
+    additional_prompting="""Make sure to give a correct answer!""",
+    provide_run_summary=True
+)
+
+managed_solver_agent_2 = ManagedAgent(
+    react_agent,
+    "solver_agent_2",
+    description="""A team member that will try to solve the task given to you. Make sure to give the main task exactly as it was given to you, word for word, to both this first solver agent first, then also give it to your second agent. Then you will be able to compare answers to decide a final answer.""",
+    additional_prompting="""You need to put all your effort into giving an exact answer!""",
+    provide_run_summary=True
+)
+
+orchestrator_agent = ReactCodeAgent(
+    llm_engine=llm_engine,
+    tools=[],
+    max_iterations=4,
+    managed_agents=[managed_solver_agent_1, managed_solver_agent_2]
+)
 
 ### EVALUATE
 
 async def call_transformers(agent, question: str, **kwargs) -> str:
+    question += "\n---\nCall both your solver agents WITH THE SAME EXACT TASK THAT WAS GIVEN TO YOU ABOVE, INCLUDING ALL EXACT DESCRIPTIONS OF POTENTIAL ATTACHED FILES, then compare results. If insure you can run them again."
     result = agent.run(question, **kwargs)
     agent_memory = agent.write_inner_memory_from_logs(summary_mode=True)
     try:
@@ -266,8 +279,8 @@ async def call_transformers(agent, question: str, **kwargs) -> str:
 
 results = asyncio.run(answer_questions(
     eval_ds,
-    react_agent,
-    "react_code_gpt-4o_03_sept_managedagent-summary_planning",
+    orchestrator_agent,
+    "gpt-4o_03_sept_orchestrator",
     output_folder=f"{OUTPUT_DIR}/{SET}",
     agent_call_function=call_transformers,
     visual_inspection_tool = VisualQAGPT4Tool(),

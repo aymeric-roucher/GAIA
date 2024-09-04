@@ -217,7 +217,7 @@ class SimpleTextBrowser:
         results = search.get_dict()
         self.page_title = f"{query} - Search"
         if "organic_results" not in results.keys():
-            raise Exception(f"'organic_results' key not found in results: {results}. Use a less restrictive query.")
+            raise Exception(f"'organic_results' key not found for query: '{query}'. Use a less restrictive query.")
         if len(results['organic_results']) == 0:
             year_filter_message = f" with filter year={filter_year}" if filter_year is not None else ""
             self._set_page_content(f"No results found for '{query}'{year_filter_message}. Try with a more general query, or remove the year filter.")

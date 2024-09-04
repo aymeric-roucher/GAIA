@@ -1,4 +1,4 @@
-from transformers.agents.llm_engine import MessageRole, get_clean_message_list
+from transformers.agents.llm_engine import MessageRole, get_clean_message_list, llama_role_conversions
 import os
 from openai import OpenAI
 from anthropic import Anthropic, AnthropicBedrock
@@ -26,6 +26,23 @@ class OpenAIEngine:
         )
         return response.choices[0].message.content
 
+class NIMEngine:
+    def __init__(self, model="meta-llama/Meta-Llama-3-8B-Instruct"):
+        self.model = model
+        self.client = OpenAI(
+            base_url="https://huggingface.co/api/integrations/dgx/v1",
+            api_key=os.getenv("HF_NIM_TOKEN")
+        )
+
+    def __call__(self, messages, stop_sequences = [], grammar=None):
+        messages = get_clean_message_list(messages, role_conversions=llama_role_conversions)
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            stop=stop_sequences,
+            max_tokens=1000,
+        )
+        return response.choices[0].message.content
 
 class AnthropicEngine:
     def __init__(self, model_name="claude-3-5-sonnet-20240620", use_bedrock=False):

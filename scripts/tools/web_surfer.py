@@ -50,12 +50,12 @@ def _browser_state() -> Tuple[str, str]:
 
 
 class SearchInformationTool(Tool):
-    name="informational_web_search"
-    description="Perform an INFORMATIONAL web search query then return the search results."
+    name="web_search"
+    description="Perform a web search query (think a google search) and returns the search results."
     inputs = {
         "query": {
             "type": "text",
-            "description": "The informational web search query to perform."
+            "description": "The web search query to perform."
         }
     }
     inputs["filter_year"]= {
