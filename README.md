@@ -27,4 +27,4 @@ AWS_BEDROCK_ID
 AWS_BEDROCK_KEY
 ```
 
-Then run `gaia.py` to launch tests!
+Then run `gaia_multiagent.py` to launch tests!

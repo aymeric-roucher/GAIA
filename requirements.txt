@@ -25,5 +25,5 @@ Requests==2.32.3
 tqdm==4.66.4
 torch
 xlrd==2.0.1
-transformers==4.44.2
 youtube_transcript_api==0.6.2
+git+https://github.com/huggingface/transformers.git#egg=transformers[agents]
