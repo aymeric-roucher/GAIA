@@ -25,7 +25,7 @@ from scripts.tools.web_surfer import (
 from scripts.tools.mdconvert import MarkdownConverter
 from scripts.reformulator import prepare_response
 from scripts.run_agents import answer_questions
-from scripts.tools.visual_qa import VisualQATool, VisualQAGPT4Tool
+from scripts.tools.visual_qa import VisualQATool, VisualQAGPT4Tool, visualizer
 from scripts.llm_engines import OpenAIEngine, AnthropicEngine, NIMEngine
 load_dotenv(override=True)
 login(os.getenv("HUGGINGFACEHUB_API_TOKEN"))
@@ -35,7 +35,7 @@ login(os.getenv("HUGGINGFACEHUB_API_TOKEN"))
 print("Make sure you deactivated Tailscale VPN, else some URLs will be blocked!")
 
 OUTPUT_DIR = "output"
-USE_OS_MODELS = False
+USE_OS_MODELS = True
 USE_JSON = False
 
 SET = "validation"
@@ -70,7 +70,7 @@ print("Loaded evaluation dataset:")
 print(pd.Series(eval_ds["task"]).value_counts())
 
 
-websurfer_llm_engine = NIMEngine(
+websurfer_llm_engine = HfApiEngine(
     model=REPO_ID_OS_MODEL,
 )  # chosen for its high context length
 
@@ -91,6 +91,9 @@ WEB_TOOLS = [
     ArchiveSearchTool(),
 ]
 
+text_limit = 70000
+if USE_OS_MODELS:
+    text_limit = 20000
 class TextInspectorTool(Tool):
     name = "inspect_file_as_text"
     description = """
@@ -100,17 +103,44 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
     inputs = {
         "question": {
             "description": "[Optional]: Your question, as a natural language sentence. Provide as much context as possible. Do not pass this parameter if you just want to directly return the content of the file.",
-            "type": "text",
+            "type": "string",
         },
         "file_path": {
             "description": "The path to the file you want to read as text. Must be a '.something' file, like '.pdf'. If it is an image, use the visualizer tool instead! DO NOT USE THIS TOOL FOR A WEBPAGE: use the search tool instead!",
-            "type": "text",
+            "type": "string",
         },
     }
-    output_type = "text"
+    output_type = "string"
     md_converter = MarkdownConverter()
 
-    def forward(self, file_path, question: Optional[str] = None, initial_exam_mode: Optional[bool] = False) -> str:
+    def forward_initial_exam_mode(self, file_path, question):
+        result = self.md_converter.convert(file_path)
+
+        if file_path[-4:] in ['.png', '.jpg']:
+            raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
+
+        if ".zip" in file_path:
+            return result.text_content
+        
+        if not question:
+            return result.text_content
+        
+        messages = [
+            {
+                "role": MessageRole.SYSTEM,
+                "content": "Here is a file:\n### "
+                + str(result.title)
+                + "\n\n"
+                + result.text_content[:text_limit],
+            },
+            {
+                "role": MessageRole.USER,
+                "content": question,
+            },
+        ]
+        return websurfer_llm_engine(messages)
+
+    def forward(self, file_path, question: Optional[str] = None) -> str:
 
         result = self.md_converter.convert(file_path)
 
@@ -123,42 +153,26 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         if not question:
             return result.text_content
         
-        if initial_exam_mode:
-            messages = [
-                {
-                    "role": MessageRole.SYSTEM,
-                    "content": "Here is a file:\n### "
-                    + str(result.title)
-                    + "\n\n"
-                    + result.text_content[:70000],
-                },
-                {
-                    "role": MessageRole.USER,
-                    "content": question,
-                },
-            ]
-            return websurfer_llm_engine(messages)
-        else:
-            messages = [
-                {
-                    "role": MessageRole.SYSTEM,
-                    "content": "You will have to write a short caption for this file, then answer this question:"
-                    + question,
-                },
-                {
-                    "role": MessageRole.USER,
-                    "content": "Here is the complete file:\n### "
-                    + str(result.title)
-                    + "\n\n"
-                    + result.text_content[:70000],
-                },
-                {
-                    "role": MessageRole.USER,
-                    "content": "Now answer the question below. Use these three headings: '1. Short answer', '2. Extremely detailed answer', '3. Additional Context on the document and question asked'."
-                    + question,
-                },
-            ]
-            return websurfer_llm_engine(messages)
+        messages = [
+            {
+                "role": MessageRole.SYSTEM,
+                "content": "You will have to write a short caption for this file, then answer this question:"
+                + question,
+            },
+            {
+                "role": MessageRole.USER,
+                "content": "Here is the complete file:\n### "
+                + str(result.title)
+                + "\n\n"
+                + result.text_content[:text_limit],
+            },
+            {
+                "role": MessageRole.USER,
+                "content": "Now answer the question below. Use these three headings: '1. Short answer', '2. Extremely detailed answer', '3. Additional Context on the document and question asked'."
+                + question,
+            },
+        ]
+        return websurfer_llm_engine(messages)
 
 
 surfer_agent = ReactJsonAgent(
@@ -190,14 +204,14 @@ Additionally, if after some searching you find out that you need more informatio
 ti_tool = TextInspectorTool()
 
 TASK_SOLVING_TOOLBOX = [
-    VisualQAGPT4Tool(),  # VisualQATool(),
+    visualizer,  # VisualQATool(),
     ti_tool,
 ]
 
 if USE_JSON:
     TASK_SOLVING_TOOLBOX.append(PythonInterpreterTool())
 
-hf_llm_engine = NIMEngine(model=REPO_ID_OS_MODEL)
+hf_llm_engine = HfApiEngine(model=REPO_ID_OS_MODEL)
 
 llm_engine = hf_llm_engine if USE_OS_MODELS else proprietary_llm_engine
 
@@ -267,7 +281,7 @@ async def call_transformers(agent, question: str, **kwargs) -> str:
 results = asyncio.run(answer_questions(
     eval_ds,
     react_agent,
-    "react_code_gpt-4o_03_sept_managedagent-summary_planning",
+    "react_code_llama-31-70B_06_sept_managedagent-summary_planning",
     output_folder=f"{OUTPUT_DIR}/{SET}",
     agent_call_function=call_transformers,
     visual_inspection_tool = VisualQAGPT4Tool(),

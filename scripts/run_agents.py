@@ -249,7 +249,7 @@ Do not add any information that is not present in the image.
 {example['question']}. But do not try to answer the question directly!
 Do not add any information that is not present in the file.
 """.strip()
-                            prompt_use_files += "> Description of this file: " + text_inspector_tool(file_path=file_path, question=prompt, initial_exam_mode=True) + '\n\n'
+                            prompt_use_files += "> Description of this file: " + text_inspector_tool.forward_initial_exam_mode(file_path=file_path, question=prompt) + '\n\n'
             elif example['file_name'].split('.')[-1] in ['png', 'jpg', 'jpeg']:
                 prompt_use_files += f"\nAttached image: {example['file_name']}"
             elif example['file_name'].split('.')[-1] in ['mp3', 'm4a', 'wav']:
@@ -268,7 +268,7 @@ Do not add any information that is not present in the image.
 {example['question']}. But do not try to answer the question directly!
 Do not add any information that is not present in the file.
 """.strip()
-                prompt_use_files += "\n> Description of this file: " + text_inspector_tool(file_path=example['file_name'], question=prompt, initial_exam_mode=True)
+                prompt_use_files += "\n> Description of this file: " + text_inspector_tool.forward_initial_exam_mode(file_path=example['file_name'], question=prompt)
         else:
             prompt_use_files += "\n\nYou have been given no local files to access."
         example['augmented_question'] = f"""It is paramount that you complete this task and provide a correct answer.

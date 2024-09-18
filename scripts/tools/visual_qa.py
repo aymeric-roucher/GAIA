@@ -7,6 +7,7 @@ import requests
 from typing import Optional
 from huggingface_hub import InferenceClient
 from transformers import AutoProcessor, Tool
+from transformers.agents import tool
 import uuid
 import mimetypes
 from dotenv import load_dotenv
@@ -108,13 +109,13 @@ class VisualQATool(Tool):
     name = "visualizer"
     description = "A tool that can answer questions about attached images."
     inputs = {
-        "question": {"description": "the question to answer", "type": "text"},
+        "question": {"description": "the question to answer", "type": "string"},
         "image_path": {
             "description": "The path to the image on which to answer the question",
-            "type": "text",
+            "type": "string",
         },
     }
-    output_type = "text"
+    output_type = "string"
 
     client = InferenceClient("HuggingFaceM4/idefics2-8b-chatty")
 
@@ -140,13 +141,13 @@ class VisualQAGPT4Tool(Tool):
     name = "visualizer"
     description = "A tool that can answer questions about attached images."
     inputs = {
-        "question": {"description": "the question to answer", "type": "text"},
+        "question": {"description": "the question to answer", "type": "string"},
         "image_path": {
             "description": "The path to the image on which to answer the question. This should be a local path to downloaded image.",
-            "type": "text",
+            "type": "string",
         },
     }
-    output_type = "text"
+    output_type = "string"
 
     def forward(self, image_path: str, question: Optional[str] = None) -> str:
         add_note = False
@@ -190,3 +191,53 @@ class VisualQAGPT4Tool(Tool):
 
         return output
 
+
+@tool
+def visualizer(image_path: str, question: Optional[str] = None) -> str:
+    """A tool that can answer questions about attached images.
+
+    Args:
+        question: the question to answer
+        image_path: The path to the image on which to answer the question. This should be a local path to downloaded image.
+    """
+
+    add_note = False
+    if not question:
+        add_note = True
+        question = "Please write a detailed caption for this image."
+    if not isinstance(image_path, str):
+        raise Exception("You should provide only one string as argument to this tool!")
+
+    base64_image = encode_image(image_path)
+
+    payload = {
+        "model": "gpt-4o",
+        "messages": [
+            {
+            "role": "user",
+            "content": [
+                {
+                "type": "text",
+                "text": question
+                },
+                {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{base64_image}"
+                }
+                }
+            ]
+            }
+        ],
+        "max_tokens": 500
+    }
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+    try:
+        output = response.json()['choices'][0]['message']['content']
+    except Exception:
+        raise Exception(f"Response format unexpected: {response.json()}")
+
+    if add_note:
+        output = f"You did not provide a particular question, so here is a detailed caption for the image: {output}"
+
+    return output

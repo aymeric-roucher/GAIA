@@ -54,15 +54,15 @@ class SearchInformationTool(Tool):
     description="Perform a web search query (think a google search) and returns the search results."
     inputs = {
         "query": {
-            "type": "text",
+            "type": "string",
             "description": "The web search query to perform."
         }
     }
     inputs["filter_year"]= {
-        "type": "text",
+        "type": "string",
         "description": "[Optional parameter]: filter the search results to only include pages from a specific year. For example, '2020' will only include pages from 2020. Make sure to use this parameter if you're trying to search for articles from a specific date!"
     }
-    output_type = "text"
+    output_type = "string"
 
     def forward(self, query: str, filter_year: Optional[int] = None) -> str:
         browser.visit_page(f"google: {query}", filter_year=filter_year)
@@ -73,8 +73,8 @@ class SearchInformationTool(Tool):
 class NavigationalSearchTool(Tool):
     name="navigational_web_search"
     description="Perform a NAVIGATIONAL web search query then immediately navigate to the top result. Useful, for example, to navigate to a particular Wikipedia article or other known destination. Equivalent to Google's \"I'm Feeling Lucky\" button."
-    inputs = {"query": {"type": "text", "description": "The navigational web search query to perform."}}
-    output_type = "text"
+    inputs = {"query": {"type": "string", "description": "The navigational web search query to perform."}}
+    output_type = "string"
 
     def forward(self, query: str) -> str:
         browser.visit_page(f"google: {query}")
@@ -92,8 +92,8 @@ class NavigationalSearchTool(Tool):
 class VisitTool(Tool):
     name="visit_page"
     description="Visit a webpage at a given URL and return its text."
-    inputs = {"url": {"type": "text", "description": "The relative or absolute url of the webapge to visit."}}
-    output_type = "text"
+    inputs = {"url": {"type": "string", "description": "The relative or absolute url of the webapge to visit."}}
+    output_type = "string"
 
     def forward(self, url: str) -> str:
         browser.visit_page(url)
@@ -107,8 +107,8 @@ class DownloadTool(Tool):
 Download a file at a given URL. The file should be of this format: [".xlsx", ".pptx", ".wav", ".mp3", ".png", ".docx"]
 After using this tool, for further inspection of this page you should return the download path to your manager via final_answer, and they will be able to inspect it.
 DO NOT use this tool for .pdf or .txt or .htm files: for these types of files use visit_page with the file url instead."""
-    inputs = {"url": {"type": "text", "description": "The relative or absolute url of the file to be downloaded."}}
-    output_type = "text"
+    inputs = {"url": {"type": "string", "description": "The relative or absolute url of the file to be downloaded."}}
+    output_type = "string"
 
     def forward(self, url: str) -> str:
         if "arxiv" in url:
@@ -133,7 +133,8 @@ DO NOT use this tool for .pdf or .txt or .htm files: for these types of files us
 class PageUpTool(Tool):
     name="page_up"
     description="Scroll the viewport UP one page-length in the current webpage and return the new viewport content."
-    output_type = "text"
+    inputs = {}
+    output_type = "string"
 
     def forward(self) -> str:
         browser.page_up()
@@ -144,10 +145,10 @@ class ArchiveSearchTool(Tool):
     name="find_archived_url"
     description="Given a url, searches the Wayback Machine and returns the archived version of the url that's closest in time to the desired date."
     inputs={
-        "url": {"type": "text", "description": "The url you need the archive for."},
-        "date": {"type": "text", "description": "The date that you want to find the archive for. Give this date in the format 'YYYYMMDD', for instance '27 June 2008' is written as '20080627'."}
+        "url": {"type": "string", "description": "The url you need the archive for."},
+        "date": {"type": "string", "description": "The date that you want to find the archive for. Give this date in the format 'YYYYMMDD', for instance '27 June 2008' is written as '20080627'."}
     }
-    output_type = "text"
+    output_type = "string"
 
     def forward(self, url, date) -> str:
         archive_url = f"https://archive.org/wayback/available?url={url}&timestamp={date}"
@@ -165,7 +166,8 @@ class ArchiveSearchTool(Tool):
 class PageDownTool(Tool):
     name="page_down"
     description="Scroll the viewport DOWN one page-length in the current webpage and return the new viewport content."
-    output_type = "text"
+    inputs = {}
+    output_type = "string"
 
     def forward(self, ) -> str:
         browser.page_down()
@@ -176,8 +178,8 @@ class PageDownTool(Tool):
 class FinderTool(Tool):
     name="find_on_page_ctrl_f"
     description="Scroll the viewport to the first occurrence of the search string. This is equivalent to Ctrl+F."
-    inputs = {"search_string": {"type": "text", "description": "The string to search for on the page. This search string supports wildcards like '*'" }}
-    output_type = "text"
+    inputs = {"search_string": {"type": "string", "description": "The string to search for on the page. This search string supports wildcards like '*'" }}
+    output_type = "string"
 
     def forward(self, search_string: str) -> str:
         find_result = browser.find_on_page(search_string)
@@ -193,7 +195,7 @@ class FindNextTool(Tool):
     name="find_next"
     description="Scroll the viewport to next occurrence of the search string. This is equivalent to finding the next match in a Ctrl+F search."
     inputs = {}
-    output_type = "text"
+    output_type = "string"
 
     def forward(self, ) -> str:
         find_result = browser.find_next()
