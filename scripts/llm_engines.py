@@ -45,16 +45,20 @@ class NIMEngine:
         return response.choices[0].message.content
 
 class AnthropicEngine:
-    def __init__(self, model_name="claude-3-5-sonnet-20240620", use_bedrock=False):
+    def __init__(self, model_name=None, use_bedrock=False):
         self.model_name = model_name
         if use_bedrock: # Cf this page: https://docs.anthropic.com/en/api/claude-on-amazon-bedrock
-            self.model_name = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+            if model_name is None:
+                model_name = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+            self.model_name = model_name
             self.client = AnthropicBedrock(
                 aws_access_key=os.getenv("AWS_BEDROCK_ID"),
                 aws_secret_key=os.getenv("AWS_BEDROCK_KEY"),
                 aws_region="us-east-1",
             )
         else:
+            if model_name is None:
+                model_name = "claude-3-5-sonnet-20241022"
             self.client = Anthropic(
                 api_key=os.getenv("ANTHROPIC_API_KEY"),
             )

@@ -35,13 +35,13 @@ login(os.getenv("HUGGINGFACEHUB_API_TOKEN"))
 print("Make sure you deactivated Tailscale VPN, else some URLs will be blocked!")
 
 OUTPUT_DIR = "output"
-USE_OS_MODELS = True
+USE_OPEN_MODELS = False
 USE_JSON = False
 
 SET = "validation"
 
 # proprietary_llm_engine = AnthropicEngine(use_bedrock=True)
-proprietary_llm_engine = OpenAIEngine()
+proprietary_llm_engine = AnthropicEngine()
 
 repo_id_llama3 = "meta-llama/Meta-Llama-3-70B-Instruct"
 repo_id_command_r = "CohereForAI/c4ai-command-r-plus"
@@ -70,12 +70,13 @@ print("Loaded evaluation dataset:")
 print(pd.Series(eval_ds["task"]).value_counts())
 
 
-websurfer_llm_engine = HfApiEngine(
-    model=REPO_ID_OS_MODEL,
-)  # chosen for its high context length
 
 # Replace with OAI if needed
-if not USE_OS_MODELS:
+if USE_OPEN_MODELS:
+    websurfer_llm_engine = HfApiEngine(
+        model=REPO_ID_OS_MODEL,
+    )  # chosen for its high context length
+else:
     websurfer_llm_engine = proprietary_llm_engine
 
 ### BUILD AGENTS & TOOLS
@@ -92,7 +93,7 @@ WEB_TOOLS = [
 ]
 
 text_limit = 70000
-if USE_OS_MODELS:
+if USE_OPEN_MODELS:
     text_limit = 20000
 class TextInspectorTool(Tool):
     name = "inspect_file_as_text"
@@ -213,7 +214,7 @@ if USE_JSON:
 
 hf_llm_engine = HfApiEngine(model=REPO_ID_OS_MODEL)
 
-llm_engine = hf_llm_engine if USE_OS_MODELS else proprietary_llm_engine
+llm_engine = hf_llm_engine if USE_OPEN_MODELS else proprietary_llm_engine
 
 react_agent = ReactCodeAgent(
     llm_engine=llm_engine,
@@ -281,7 +282,7 @@ async def call_transformers(agent, question: str, **kwargs) -> str:
 results = asyncio.run(answer_questions(
     eval_ds,
     react_agent,
-    "react_code_llama-31-70B_06_sept_managedagent-summary_planning",
+    "react_code_claude_sonnet_28-10_managedagent-summary_planning",
     output_folder=f"{OUTPUT_DIR}/{SET}",
     agent_call_function=call_transformers,
     visual_inspection_tool = VisualQAGPT4Tool(),
