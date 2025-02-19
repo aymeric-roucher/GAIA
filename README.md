@@ -28,3 +28,8 @@ AWS_BEDROCK_KEY
 ```
 
 Then run `gaia_multiagent.py` to launch tests!
+
+### Head to smolagents for a better version!
+
+We've mnaged to increase score to 55% using the new framework smolagents!
+Head to [this folder in smolagents](https://github.com/huggingface/smolagents/tree/main/examples/open_deep_research) to find a more recent run on GAIA, with better scores than this one!
